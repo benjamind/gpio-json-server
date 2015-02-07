@@ -136,7 +136,7 @@ func gpioPinMap() {
 		Success bool
 		Type string
 	}{
-		desc.GPIODriver().GetPinMap(),
+		desc.GPIODriver().PinMap(),
 		true,
 		"Pinmap",
 	}
@@ -166,7 +166,7 @@ func gpioPWMPin(pinId string, value byte) {
 			return
 		}
 		
-		pinmap := desc.GPIODriver().GetPinMap()
+		pinmap := desc.GPIODriver().PinMap()
 
 		pd, found := pinmap.Lookup(pinId, 1)
 
