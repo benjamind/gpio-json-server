@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	version			= "1.0"
-	versionFloat	= float32(1.0)
+	version			= "1.1"
+	versionFloat	= float32(1.1)
 	addr			= flag.String("addr", ":8888", "http service address")
 )
 
