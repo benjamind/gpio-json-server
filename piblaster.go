@@ -1,44 +1,70 @@
+// +build linux,arm
+
 package main
 
 import (
-  "os"
-  "fmt"
-  //"bytes"
-  "strconv"
+	"os"
+	"strconv"
+	"errors"
+	"log"
 )
 
-type Blaster struct {
-  Pins map[int64]float64
+type BlasterPin struct {
+	id int
+	value float64
 }
 
-func check(e error) {
-  if e != nil {
-    panic(e)
-  }
+func InitBlaster() error {
+	// check the file actually exists, throw error if not so Pi can bail out
+	if _, err := os.Stat("/dev/pi-blaster"); os.IsNotExist(err) {
+		return errors.New("/dev/pi-blaster does not exists, is pi-blaster correctly installed?")
+	}
+	return nil
 }
-
-var b = Blaster{
-  Pins: make(map[int64]float64),
+func CloseBlaster() error {
+	return nil
 }
+func NewBlasterPin(pinId int) BlasterPin {
+	log.Println("Creating pi blaster pin on ", string(pinId))
+	return BlasterPin {
+		pinId,
+		0.0,
+	}
+}
+func (b *BlasterPin) Close() error {
+	f, err := os.Create("/dev/pi-blaster")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString("release " + strconv.Itoa(b.id))
+	if err != nil {
+		return err
+	}
+	f.Sync()
+	return nil
+}
+func (b *BlasterPin) Write(value byte) error {
+	f, err := os.Create("/dev/pi-blaster")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
-func (b *Blaster) Apply(pin int64, value float64) {
-  f, err := os.Create("/dev/pi-blaster")
-  check(err)
-  defer f.Close()
-
-  // ensure set value > 0, < 1
-  if value > 1.0 {
-    fmt.Printf("Request value exceeds 1, setting to 1\n")
-    value = 1.0
-  } else if value < 0.0 {
-    fmt.Printf("Requested value below 0, setting to 0\n")
-    value = 0.0
-  }
-
-  var toVal string
-  toVal = strconv.FormatFloat(value, 'f', 2, 64)
-  n1, err := f.WriteString(strconv.FormatInt(pin, 10) + "=" + toVal + "\n")
-  b.Pins[pin] = value
-  fmt.Printf("wrote %d bytes (%d = %s)\n", n1, pin, toVal)
-  f.Sync()
+	v := (float64(value)/255.0)
+	if v > 1.0 {
+		v = 1.0
+	} else if v < 0.0 {
+		v = 0.0
+	}
+	toVal := strconv.FormatFloat(v, 'f', 2, 64)
+	msg := strconv.Itoa(b.id) + "=" + string(toVal)
+	_, err = f.WriteString(msg + "\n")
+	if err != nil {
+		log.Println("PiBlaster: Failed to write :", err.Error())
+		return err
+	}
+	b.value = v
+	f.Sync()
+	return nil
 }
