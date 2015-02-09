@@ -296,6 +296,8 @@ func (g *GPIO) PinInit(pinId string, dir Direction, pullup PullUp, name string) 
 		g.pinStates[pinId] = existingPin
 
 		g.pinStateChanged <- existingPin
+		g.pinRemoved <- pinId
+		g.pinAdded <- g.pinStates[pinId]
 	} else {
 		g.pinStates[pinId] = PinState{pin, pinId, dir, state, pullup, name}
 		g.pinAdded <- g.pinStates[pinId]
