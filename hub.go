@@ -41,8 +41,8 @@ func (h *hub) run(gpio *GPIO) {
 		case c := <-h.register:
 			h.connections[c] = true
 			// send supported commands
-			c.send <- []byte("{\"Version\" : \"" + version + "\"} ")
-			c.send <- []byte("{\"Commands\" : [ \"gethost\", \"getpinmap\", \"getpinstates\", \"initpin\", \"setpin\", \"removepin\" ]} ")
+			c.send <- []byte("{\"Type\" : \"Version\", \"Version\" : \"" + version + "\"} ")
+			c.send <- []byte("{\"Type\" : \"Commands\", \"Commands\" : [ \"gethost\", \"getpinmap\", \"getpinstates\", \"initpin\", \"setpin\", \"removepin\" ]} ")
 		case c := <-h.unregister:
 			delete(h.connections, c)
 			// put close in func cuz it was creating panics and want
@@ -68,19 +68,6 @@ func (h *hub) run(gpio *GPIO) {
 				log.Print(h.broadcast)*/
 				h.checkCmd(m)
 				//log.Print("-----")
-
-				for c := range h.connections {
-					select {
-					case c.send <- m:
-						/*log.Print("did broadcast to ")
-						log.Print(c.ws.RemoteAddr())*/
-						//c.send <- []byte("hello world")
-					default:
-						delete(h.connections, c)
-						close(c.send)
-						go c.ws.Close()
-					}
-				}
 			}
 		case m := <-h.broadcastSys:
 			/*log.Printf("Got a system broadcast: %v\n", string(m))
@@ -117,6 +104,7 @@ func (h *hub) sendErr(msg string) {
 func (h *hub) sendMsg(name string, msg interface{}) {
 	msgMap := make(map[string] interface{})
 	msgMap[name] = msg
+	msgMap["Type"] = name
 	//log.Println("Sent: " + name)
 	bytes, err := json.Marshal(msgMap)
 	if err!=nil {
